@@ -133,6 +133,8 @@ justify-content:center;
 
 font-size:95px;
 
+background: #000; /* фон для избежания просветов */
+
 }
 
 /* BUTTON */
@@ -268,18 +270,31 @@ const winSound=new Audio("https://actions.google.com/sounds/v1/cartoon/concussiv
 
 const smallWinSound=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
 
-/* BUILD REEL */
+/* BUILD REEL - ИСПРАВЛЕНО */
 
 function buildReel(reel){
 
 reel.innerHTML="";
 
-for(let i=0;i<30;i++){
+// Создаем больше символов и дублируем их для бесшовной прокрутки
+for(let i=0;i<50;i++){
 
 let div=document.createElement("div");
 div.className="symbol";
 
 div.textContent=symbols[Math.floor(Math.random()*symbols.length)];
+
+reel.appendChild(div);
+
+}
+
+// Добавляем несколько первых символов в конец для зацикливания
+for(let i=0;i<5;i++){
+
+let div=document.createElement("div");
+div.className="symbol";
+
+div.textContent=reel.children[i].textContent;
 
 reel.appendChild(div);
 
@@ -310,7 +325,7 @@ updateUI();
 
 }
 
-/* SPIN */
+/* SPIN - ИСПРАВЛЕНО */
 
 function spin(){
 
@@ -339,17 +354,20 @@ reel.style.transform="translateY(0px)";
 
 setTimeout(()=>{
 
-reel.style.transition=`transform ${2+i*0.4}s`;
+reel.style.transition=`transform ${2+i*0.4}s cubic-bezier(0.1, 0.7, 0.1, 1)`;
 
-let stop=20+Math.floor(Math.random()*symbols.length);
+// Вычисляем высоту символа в зависимости от размера экрана
+const symbolHeight = window.innerWidth <= 600 ? 90 : 140;
 
-let offset=stop*140;
+// Останавливаемся на позиции, кратной высоте символа
+let stop = 15 + Math.floor(Math.random() * symbols.length);
+let offset = stop * symbolHeight;
 
 reel.style.transform=`translateY(-${offset}px)`;
 
 if(i===2){
 
-setTimeout(checkWin,2500);
+setTimeout(checkWin, 2500);
 
 }
 
@@ -359,27 +377,55 @@ setTimeout(checkWin,2500);
 
 }
 
-/* GET SYMBOL */
+/* GET SYMBOL - ИСПРАВЛЕНО */
 
 function getSymbol(reel){
 
 const matrix=getComputedStyle(reel).transform;
 
-const y=Math.abs(parseInt(matrix.split(",")[5]));
+let y=0;
 
-const index=Math.round(y/140);
+if(matrix && matrix !== "none"){
+
+const values=matrix.split(",");
+
+if(values.length > 5){
+
+y=Math.abs(parseInt(values[5]));
+
+}
+
+}
+
+// Вычисляем высоту символа в зависимости от размера экрана
+const symbolHeight = window.innerWidth <= 600 ? 90 : 140;
+
+// Округляем до ближайшего целого и берем по модулю количество символов
+let index = Math.round(y/symbolHeight);
+
+// Добавляем проверку на выход за границы
+if(index >= reel.children.length){
+
+index = reel.children.length - 1;
+
+}
 
 return reel.children[index].textContent;
 
 }
 
-/* WIN */
+/* WIN - ИСПРАВЛЕНО */
 
 function checkWin(){
+
+// Небольшая задержка для гарантии завершения анимации
+setTimeout(() => {
 
 let a=getSymbol(r1);
 let b=getSymbol(r2);
 let c=getSymbol(r3);
+
+console.log("Symbols:", a, b, c); // для отладки
 
 let win=0;
 
@@ -389,6 +435,8 @@ win=bet*10;
 
 winSound.play();
 
+resultEl.textContent="🎉 ДЖЕКПОТ! +"+win;
+
 }
 
 else if(a===b || b===c || a===c){
@@ -397,13 +445,13 @@ win=bet*3;
 
 smallWinSound.play();
 
+resultEl.textContent="🎁 ВЫИГРЫШ! +"+win;
+
 }
 
 if(win>0){
 
 coins+=win;
-
-resultEl.textContent="🎉 WIN "+win;
 
 resultEl.className="result win";
 
@@ -416,6 +464,8 @@ resultEl.className="result";
 }
 
 updateUI();
+
+}, 100); // небольшая задержка
 
 }
 
